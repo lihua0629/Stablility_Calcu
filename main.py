@@ -305,18 +305,23 @@ class RecoveryArmCalculator:
                     messagebox.showerror("错误", "请选择浮力数据文件")
                     return
                     
-                component = Component("整体", 1, 0, 0, 0, self.current_file)
-                if not component.load_buoyancy_data():
+                # 创建一个临时组件用于计算，但不添加到self.components中
+                temp_component = Component("整体", 1, 0, 0, 0, self.current_file)
+                if not temp_component.load_buoyancy_data():
                     return
                     
-                self.components = [component]
+                # 使用临时组件进行计算
+                components_for_calc = [temp_component]
+            else:
+                # 使用已有组件进行计算
+                components_for_calc = self.components
                 
             # 计算总质量和质心
-            total_mass = sum(c.mass for c in self.components)
-            z_g = sum(c.mass * c.z_g for c in self.components) / total_mass if total_mass > 0 else 0
+            total_mass = sum(c.mass for c in components_for_calc)
+            z_g = sum(c.mass * c.z_g for c in components_for_calc) / total_mass if total_mass > 0 else 0
             
             # 获取第一个部件的角度列表作为基准
-            angles = self.components[0].buoyancy_data['angle'].values
+            angles = components_for_calc[0].buoyancy_data['angle'].values
             recovery_arms = []
             
             for angle in angles:
@@ -325,7 +330,7 @@ class RecoveryArmCalculator:
                 weighted_y_b = 0
                 weighted_z_b = 0
                 
-                for component in self.components:
+                for component in components_for_calc:
                     # 获取最接近的角度数据
                     angle_data = component.buoyancy_data.iloc[
                         (component.buoyancy_data['angle'] - angle).abs().argsort()[:1]
